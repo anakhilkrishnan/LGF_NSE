@@ -46,9 +46,10 @@ else()
 endif()
 
 # adding additional repositories
+add_subdirectory(Ext/LGF_Accelerate)
 add_subdirectory(Src/NSE_core)
 add_subdirectory(Src/NSE_test) 
-add_subdirectory(Ext/LGF_Accelerate)
+
 
 # make Exec directories in case they're not present
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/Exec/NSE_test/Results")

@@ -1,0 +1,57 @@
+Initializing AMReX (26.05-62-gff884e3b1e31)...
+MPI initialized with 1 MPI processes
+MPI initialized with thread support level 0
+AMReX (26.05-62-gff884e3b1e31) initialized
+This is the start of my first NSE solver.
+Writing plotfile to: ./Results/FMM256/plt00000
+Plotfile written to: ./Results/FMM256/plt00000
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00001
+Plotfile written to: ./Results/FMM256/plt00001
+Step: 1 | Time: 0.001921910297 | dt: 0.001921910297 | WallTime: 5.884590054s | divU_max: 0.1828067528
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00002
+Plotfile written to: ./Results/FMM256/plt00002
+Step: 2 | Time: 0.003841462132 | dt: 0.001919551834 | WallTime: 5.92790025s | divU_max: 537.1204801
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00003
+Plotfile written to: ./Results/FMM256/plt00003
+Step: 3 | Time: 0.003843085409 | dt: 1.623277848e-06 | WallTime: 5.82951898s | divU_max: 1.823491011e+11
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00004
+Plotfile written to: ./Results/FMM256/plt00004
+Step: 4 | Time: 0.003843085409 | dt: 5.095791105e-15 | WallTime: 5.835051519s | divU_max: 6.074518329e+19
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00005
+Plotfile written to: ./Results/FMM256/plt00005
+Step: 5 | Time: 0.003843085409 | dt: 1.529067101e-23 | WallTime: 5.822425495s | divU_max: 2.024881916e+28
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00006
+Plotfile written to: ./Results/FMM256/plt00006
+Step: 6 | Time: 0.003843085409 | dt: 4.58701425e-32 | WallTime: 5.902855944s | divU_max: 6.749906084e+36
+Calculating potential...
+Calculated potential.
+Calculating potential...
+Calculated potential.
+Writing plotfile to: ./Results/FMM256/plt00007
+Plotfile written to: ./Results/FMM256/plt00007
+Step: 7 | Time: 0.003843085409 | dt: 1.376042818e-40 | WallTime: 5.952535372s | divU_max: 2.250069286e+45
+Calculating potential...

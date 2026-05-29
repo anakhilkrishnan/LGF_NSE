@@ -15,7 +15,7 @@ void initializeFlowField(FlowField& init_state)
     GpuArray<amrex::Real, AMREX_SPACEDIM> prob_lo = geom.ProbLoArray();
 
     // data extracted from "isotropic finite volume discretizations - RK Shukla, P Giri"
-    amrex::Real r0 = 0.01;
+    amrex::Real r0 = 0.05;
     amrex::Real omega_0 = 2.0 * std::sqrt(2.0 * exp(1.0)) / r0;
 
     // defining the vortex centers

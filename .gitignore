@@ -1,0 +1,31 @@
+# IDE & OS Specific Files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# CMake Build Directories (Root Level)
+# Ignores build/, buildgpu/, build_cpu/, etc. at the project root
+build*/
+Build*/
+nsebuild*/
+nseBuild*/
+NSEbuild*/
+NSEBuild*/
+out/
+
+# Executable Binaries
+# Ignore the compiled solver binaries inside the Exec subfolders
+# Build artifacts and binaries
+nserun
+*.o
+*.ex
+plt*
+post*
+
+Exec/build*/
+Exec/Build*/
+Exec/nsebuild*/
+Exec/Nsebuild*/
+Exec/NSEbuild*/
+Exec/NSEBuild*/

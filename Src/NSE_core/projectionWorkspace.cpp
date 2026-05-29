@@ -125,7 +125,9 @@ void ProjectionWorkspace::computePressure(FlowField& stage, amrex::Real source_t
     divU_max_norm = stage.getDivU().norm0(0, 0, false);
 
     // performing addition of box values
-    addEverySourceBox(stage.getDivU(), corr_pres, geom, box_tag_arr);
+    // addEverySourceBox(stage.getDivU(), corr_pres, geom, box_tag_arr);
+    // using FMM based solver instead
+    solveFMM(stage.getDivU(), corr_pres, geom);
 
     corr_pres.FillBoundary(geom.periodicity());
 }

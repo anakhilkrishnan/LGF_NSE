@@ -1,7 +1,3 @@
-[submodule "Ext/Ext/LGF_Accelerate"]
-	path = Ext/Ext/LGF_Accelerate
-	url = git@github.com:anakhilkrishnan/LGF_Accelerate.git
-	branch = BBFMM2d
 [submodule "Ext/LGF_Accelerate"]
 	path = Ext/LGF_Accelerate
 	url = git@github.com:anakhilkrishnan/LGF_Accelerate.git

@@ -33,11 +33,3 @@ add_custom_command(TARGET nserun POST_BUILD
     "${CMAKE_SOURCE_DIR}/Exec/NSE_test/debug.sh"
     COMMENT "Syncing jobscript to Exec/NSE_test..."
 )
-
-# Update the postprocessing file
-add_custom_command(TARGET nserun POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/postProcess.py"
-    "${CMAKE_SOURCE_DIR}/Exec/NSE_test/postProcess.py"
-    COMMENT "Syncing postprocessing script to Exec/NSE_test..."
-)

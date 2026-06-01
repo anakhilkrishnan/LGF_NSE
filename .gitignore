@@ -5,7 +5,7 @@
 *.swp
 
 # CMake Build Directories (Root Level)
-# Ignores build/, buildgpu/, build_cpu/, etc. at the project root
+# Ignore build/, buildgpu/, build_cpu/, etc. at the project root
 build*/
 Build*/
 nsebuild*/
@@ -13,6 +13,9 @@ nseBuild*/
 NSEbuild*/
 NSEBuild*/
 out/
+
+# Ignore complete Exec directory, have it local for each machine
+Exec/
 
 # Executable Binaries
 # Ignore the compiled solver binaries inside the Exec subfolders
@@ -22,10 +25,3 @@ nserun
 *.ex
 plt*
 post*
-
-Exec/build*/
-Exec/Build*/
-Exec/nsebuild*/
-Exec/Nsebuild*/
-Exec/NSEbuild*/
-Exec/NSEBuild*/

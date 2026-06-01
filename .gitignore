@@ -15,7 +15,7 @@ NSEBuild*/
 out/
 
 # Ignore complete Exec directory, have it local for each machine
-Exec/
+/Exec/*
 
 # Executable Binaries
 # Ignore the compiled solver binaries inside the Exec subfolders

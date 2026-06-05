@@ -10,6 +10,9 @@
 #include <AMReX_BLProfiler.H>
 
 #include <FlowField.H>
+#include <SpatialDiscretization.H>
+#include <RKCoefficients.H>
+#include <LGFCore.H>
 
 using namespace amrex;
 
@@ -27,6 +30,7 @@ class ProjectionWorkspace
     public: 
         amrex::Real divU_max_norm;
         ProjectionWorkspace(const amrex::Geometry& geom_in, const amrex::BoxArray& ba_in, const amrex::DistributionMapping& dm_in, const int n_comp, const int n_ghost);
+        amrex::Real computeDt(const FlowField& state, amrex::Real cfl, amrex::Real Re);
         void computeConvectiveFluxes(const FlowField& stage, amrex::Real Re);
         void predictVelocity(const FlowField& state_n, FlowField& stage, amrex::Real dt, amrex::Real alpha, amrex::Real beta, amrex::Real gamma);
         void computePressure(FlowField& stage, amrex::Real source_tag_thresh, amrex::Vector<int>& box_tag_arr);

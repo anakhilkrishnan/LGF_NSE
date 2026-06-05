@@ -1,7 +1,10 @@
 add_executable(nserun
                 main.cpp
                 initializeFlow.cpp
-                MyFunctions.H)
+                ioManager.cpp
+                MyFunctions.H
+                SimConfig.H
+                IOManager.H)
 
 # uncomment below line for gpu compilation
 # setup_target_for_cuda_compilation(nserun)

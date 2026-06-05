@@ -1,0 +1,34 @@
+amrex.max_gpu_streams = 4
+
+n_cell = 1024
+max_grid_size = 1024
+n_ghost = 1
+n_comp = 1
+domain_lo = -1.0 -1.0 -1.0
+domain_hi = 1.0 1.0 1.0
+
+rk_order = 2
+max_steps = 1500
+t_start = 0.0
+t_stop = 10.0
+cfl = 0.5
+
+Re = 30000
+tagging_threshold = 0.0
+
+write_plot = true
+plot_int = 10
+plot_dir = "./Results"
+plot_prefix = "/plt"
+
+write_chk = true
+start_from_chk = true
+chk_int = 20
+chk_dir = "./Checkpoints/main"
+altchk_dir = "./Checkpoints/alt"
+chk_prefix = "/chk"
+
+write_log = true
+log_int = 1
+log_dir = "./Logs"
+log_prefix = "log.txt"

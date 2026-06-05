@@ -1,7 +1,4 @@
 #include <ProjectionWorkspace.H>
-#include <spatialDiscretization.H>
-#include <RKCoefficients.H>
-#include <LGFCore.H>
 
 ProjectionWorkspace::ProjectionWorkspace(const amrex::Geometry& geom_in, const amrex::BoxArray& ba_in, const amrex::DistributionMapping& dm_in, const int n_comp, const int n_ghost)
     : geom(geom_in), ba(ba_in), dm(dm_in)
@@ -27,14 +24,53 @@ ProjectionWorkspace::ProjectionWorkspace(const amrex::Geometry& geom_in, const a
     divU_max_norm = 0.0;
 }
 
+amrex::Real ProjectionWorkspace::computeDt(const FlowField& state, amrex::Real cfl, amrex::Real Re)
+{
+    const amrex::Geometry& geom = state.getGeom();
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
+    // cfl constraint: advective limit on dt
+    amrex::Real u_max = state.getVel(0).norm0(0, 0, false);
+    amrex::Real adv_metric = u_max / dx[0];
+
+    #if AMREX_SPACEDIM >= 2
+        amrex::Real v_max = state.getVel(1).norm0(0, 0, false);
+        adv_metric += v_max / dx[1];
+    #endif
+
+    #if AMREX_SPACEDIM == 3
+        amrex::Real w_max = state.getVel(2).norm0(0, 0, false);
+        adv_metric += w_max / dx[2];
+    #endif
+
+    // dt_adv = CFL / ( |u|/dx + |v|/dy + |w|/dz )
+    amrex::Real dt_adv = cfl / (adv_metric + 1.0e-12); // epsilon to prevent div-by-zero
+
+    // diffusive limit on dt
+    amrex::Real diff_metric = 1.0 / (dx[0] * dx[0]);
+    
+    #if AMREX_SPACEDIM >= 2
+        diff_metric += 1.0 / (dx[1] * dx[1]);
+    #endif
+
+    #if AMREX_SPACEDIM == 3
+        diff_metric += 1.0 / (dx[2] * dx[2]);
+    #endif
+
+    // for explicit schemes, Fourier number <= 0.5 dt_diff <= 0.5 * Re / (
+    // 1/dx^2 + 1/dy^2 + 1/dz^2 )
+    amrex::Real dt_diff = 0.5 * Re / diff_metric;
+
+    return amrex::min(dt_adv, dt_diff);
+}
+
 void ProjectionWorkspace::computeConvectiveFluxes(const FlowField& stage, amrex::Real Re)
 {
     BL_PROFILE("<Compute> advanceTimeStep(): computeConvectiveFluxes()");
-    // compute the right hand side which is of the form
-    // 1/Re(laplacian(u)) - grad(P) - u.divergence(u)
-    // all taken at the n^th timestep
-    // discretized using a second order finite difference KEP scheme
-    // as outlined in Morinishi et al.
+    // compute the right hand side which is of the form 1/Re(laplacian(u)) -
+    // grad(P) - u.divergence(u) all taken at the n^th timestep discretized
+    // using a second order finite difference KEP scheme as outlined in
+    // Morinishi et al.
 
     // extracting physical dx for computations
     const amrex::Geometry& geom = stage.getGeom();
@@ -56,7 +92,8 @@ void ProjectionWorkspace::computeConvectiveFluxes(const FlowField& stage, amrex:
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                // evaluating one at a time for template variable idim, because these happen at compile time
+                // evaluating one at a time for template variable idim, because
+                // these happen at compile time
                 if (idim == 0) 
                 {
                     rhs(i,j,k) = morinishiFlux<0>(i, j, k, vel_arr, pres_arr, dx, Re);
@@ -81,12 +118,12 @@ void ProjectionWorkspace::computeConvectiveFluxes(const FlowField& stage, amrex:
 void ProjectionWorkspace::predictVelocity(const FlowField& state_n, FlowField& stage, amrex::Real dt, amrex::Real alpha, amrex::Real beta, amrex::Real gamma)
 {
     BL_PROFILE("<Compute> advanceTimeStep(): predictVelocity");
-    // use the right hand side to predict velocity at the next time step,
-    // before enforcing divergence free condition
+    // use the right hand side to predict velocity at the next time step, before
+    // enforcing divergence free condition
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
-        // using amrex's linalg functions for this step
-        // not updating any ghost cell data here, those are updated by BCs
+        // using amrex's linalg functions for this step not updating any ghost
+        // cell data here, those are updated by BCs
         amrex::MultiFab::LinComb(stage.getVel(idim), alpha, state_n.getVel(idim), 0, beta, stage.getVel(idim), 0, 0, stage.getVel(idim).nComp(), 0);
         amrex::Real dt_by_gam = dt / gamma;
         amrex::MultiFab::Saxpy(stage.getVel(idim), dt_by_gam, rhs_vel[idim], 0, 0, stage.getVel(idim).nComp(), 0);
@@ -118,15 +155,15 @@ void ProjectionWorkspace::computePressure(FlowField& stage, amrex::Real source_t
     }
 
     // use the custom lgf solver to compute the pressure at the next time step
-    // running the tagging algorithmn and obtaining the box tags as an array of 0s and 1s
+    // running the tagging algorithmn and obtaining the box tags as an array of
+    // 0s and 1s
     box_tag_arr = tagSource(stage.getDivU(), source_tag_thresh);
     
     // write out divU_max_norm
     divU_max_norm = stage.getDivU().norm0(0, 0, false);
 
-    // performing addition of box values
-    // addEverySourceBox(stage.getDivU(), corr_pres, geom, box_tag_arr);
-    // using FMM based solver instead
+    // performing addition of box values addEverySourceBox(stage.getDivU(),
+    // corr_pres, geom, box_tag_arr); using FMM based solver instead
     solveFMM(stage.getDivU(), corr_pres, geom);
 
     corr_pres.FillBoundary(geom.periodicity());
@@ -151,7 +188,8 @@ void ProjectionWorkspace::computeVelocityCorrection(FlowField& stage)
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                // evaluating one at a time for template variable idim, because these happen at compile time
+                // evaluating one at a time for template variable idim, because
+                // these happen at compile time
                 if (idim == 0) 
                 {
                     rhs_corr(i,j,k) = discreteGradient<0>(i, j, k, corr_pres_arr, dx);
@@ -180,8 +218,7 @@ void ProjectionWorkspace::correctVelocityandPressure(FlowField& stage, amrex::Re
     // use the updated pressure to correct velocity to a divergence free field
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
-        // updating velocity correctly
-        // BCs are not updated here
+        // updating velocity correctly BCs are not updated here
         amrex::MultiFab::Subtract(stage.getVel(idim), rhs_vel_corr[idim], 0, 0, stage.getVel(idim).nComp(), 0);
     }
 
@@ -189,8 +226,8 @@ void ProjectionWorkspace::correctVelocityandPressure(FlowField& stage, amrex::Re
     amrex::Real gam_by_dt = gamma/dt;
     amrex::MultiFab::Saxpy(stage.getPres(), gam_by_dt, corr_pres, 0, 0, stage.getPres().nComp(), stage.getPres().nGrow());
 
-    // additional checker for divergence at end of step
-    // extracting physical dx for computations
+    // additional checker for divergence at end of step extracting physical dx
+    // for computations
     const amrex::Geometry& geom = stage.getGeom();
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
@@ -214,9 +251,9 @@ void ProjectionWorkspace::correctVelocityandPressure(FlowField& stage, amrex::Re
 void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, amrex::Real Re, int rk_order, amrex::Real source_tag_thresh)
 {
 
-    // perform low-storage RK method for specified order, which can be reduced 
-    // to a set of Forward Euler like stages with the final sum having appropriate
-    // coefficients alpha, beta, gamma
+    // perform low-storage RK method for specified order, which can be reduced
+    // to a set of Forward Euler like stages with the final sum having
+    // appropriate coefficients alpha, beta, gamma
 
     BL_PROFILE("<Compute> advanceTimeStep()");
     FlowField stage = state_n;
@@ -233,18 +270,18 @@ void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, am
         // compute and store fluxes in workspace
         computeConvectiveFluxes(stage, Re);
 
-        // compute predicted velocity without divergence free condition
-        // store predicted velocity within stage
+        // compute predicted velocity without divergence free condition store
+        // predicted velocity within stage
         predictVelocity(state_n, stage, dt, alpha, beta, gamma);
         stage.setBoundary(geom);
 
-        // find divergence of predicted velocity, store in workspace
-        // use custom LGF solver to find pressure correction delta
-        // update pressure stored in stage
+        // find divergence of predicted velocity, store in workspace use custom
+        // LGF solver to find pressure correction delta update pressure stored
+        // in stage
         computePressure(stage, source_tag_thresh, tag_region);
 
-        // use pressure to compute velocity correction
-        // store correction in workspace
+        // use pressure to compute velocity correction store correction in
+        // workspace
         computeVelocityCorrection(stage);
 
         // correct stage using correction from workspace
@@ -268,4 +305,71 @@ void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, am
     }
 
     state_n = stage;
+}
+
+// function to compute cell-centered vorticity from staggered flowfield for
+// plotting
+amrex::MultiFab computeCellCenteredVorticity(const FlowField& state)
+{
+    BL_PROFILE("computeCellCenteredVorticity()");
+
+    // get geometry and grid info using your safely encapsulated getter!
+    const amrex::Geometry& geom = state.getGeom();
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
+    amrex::BoxArray ba = state.getPres().boxArray();
+    amrex::DistributionMapping dm = state.getPres().DistributionMap();
+
+    // allocate the cell-centered vorticity MultiFab In 2D: 1 component
+    // (omega_z). In 3D: 3 components (omega_x, omega_y, omega_z)
+    int ncomp = (AMREX_SPACEDIM == 2) ? 1 : 3;
+    amrex::MultiFab vort(ba, dm, ncomp, 0);
+
+    // compute the averaged gradients on the GPU
+    for (amrex::MFIter mfi(vort, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& bx = mfi.tilebox();
+
+        auto const& vort_arr = vort.array(mfi);
+        auto const& u_arr    = state.getVel(0).const_array(mfi);
+        auto const& v_arr    = state.getVel(1).const_array(mfi);
+        
+        #if AMREX_SPACEDIM == 3
+        auto const& w_arr    = state.getVel(2).const_array(mfi);
+        #endif
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+            // Note: A face-centered array at index (i,j,k) represents the
+            // 'left' or 'bottom' face. (i+1,j,k) represents the 'right' face,
+            // etc.
+            
+            #if AMREX_SPACEDIM == 2
+                // dv/dx averaged from top and bottom y-faces
+                amrex::Real dvdx = (v_arr(i+1,j,k) + v_arr(i+1,j+1,k) - v_arr(i-1,j,k) - v_arr(i-1,j+1,k)) / (4.0 * dx[0]);
+                // du/dy averaged from left and right x-faces
+                amrex::Real dudy = (u_arr(i,j+1,k) + u_arr(i+1,j+1,k) - u_arr(i,j-1,k) - u_arr(i+1,j-1,k)) / (4.0 * dx[1]);
+                
+                vort_arr(i,j,k) = dvdx - dudy;
+
+            #elif AMREX_SPACEDIM == 3
+                // omega_x = dw/dy - dv/dz
+                amrex::Real dwdy = (w_arr(i,j+1,k) + w_arr(i,j+1,k+1) - w_arr(i,j-1,k) - w_arr(i,j-1,k+1)) / (4.0 * dx[1]);
+                amrex::Real dvdz = (v_arr(i,j,k+1) + v_arr(i,j+1,k+1) - v_arr(i,j,k-1) - v_arr(i,j+1,k-1)) / (4.0 * dx[2]);
+                vort_arr(i,j,k,0) = dwdy - dvdz;
+
+                // omega_y = du/dz - dw/dx
+                amrex::Real dudz = (u_arr(i,j,k+1) + u_arr(i+1,j,k+1) - u_arr(i,j,k-1) - u_arr(i+1,j,k-1)) / (4.0 * dx[2]);
+                amrex::Real dwdx = (w_arr(i+1,j,k) + w_arr(i+1,j,k+1) - w_arr(i-1,j,k) - w_arr(i-1,j,k+1)) / (4.0 * dx[0]);
+                vort_arr(i,j,k,1) = dudz - dwdx;
+
+                // omega_z = dv/dx - du/dy
+                amrex::Real dvdx = (v_arr(i+1,j,k) + v_arr(i+1,j+1,k) - v_arr(i-1,j,k) - v_arr(i-1,j+1,k)) / (4.0 * dx[0]);
+                amrex::Real dudy = (u_arr(i,j+1,k) + u_arr(i+1,j+1,k) - u_arr(i,j-1,k) - u_arr(i+1,j-1,k)) / (4.0 * dx[1]);
+                vort_arr(i,j,k,2) = dvdx - dudy;
+            #endif
+        });
+    }
+
+    return vort;
 }

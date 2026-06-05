@@ -48,7 +48,7 @@ endif()
 # adding additional repositories
 add_subdirectory(Ext/LGF_Accelerate)
 add_subdirectory(Src/NSE_core)
-add_subdirectory(Src/NSE_test) 
+add_subdirectory(Src/NSE_run) 
 
 
 # make Exec directories in case they're not present

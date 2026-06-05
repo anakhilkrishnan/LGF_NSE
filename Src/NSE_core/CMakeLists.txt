@@ -5,7 +5,7 @@ add_library(NSE_core_lib STATIC
                 FlowField.H
                 ProjectionWorkspace.H
                 RKCoefficients.H
-                spatialDiscretization.H)
+                SpatialDiscretization.H)
                 
 # setup_target_for_cuda_compilation(NSE_core_lib)
 

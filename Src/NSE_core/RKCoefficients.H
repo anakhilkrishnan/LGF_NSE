@@ -12,7 +12,7 @@ struct RKCoeffs
 };
 
 // Return a Vector instead of an Array!
-amrex::Vector<RKCoeffs> getRKCoeffs(int rk_order)
+inline amrex::Vector<RKCoeffs> getRKCoeffs(int rk_order)
 {
     amrex::Vector<RKCoeffs> coeffs;
 

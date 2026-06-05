@@ -11,16 +11,15 @@
 #include <AMReX_BLProfiler.H>
 #include <string>
 
+#include <SimConfig.H>
+#include <IOManager.H>
 #include <FlowField.H>
 #include <ProjectionWorkspace.H>
 
+
 using namespace amrex;
 
-void testPrint();
-amrex::MultiFab computeCellCenteredVorticity(const FlowField& state);
-void writeStaggeredPlotFile(int step, amrex::Real time, const FlowField& state, const amrex::BoxArray ba, const amrex::DistributionMapping dm, const amrex::Geometry& geom, int n_cell, std::string plot_prefix);
 void extendedMain();
-
 void initializeFlowField(FlowField& init_state);
 
 #endif

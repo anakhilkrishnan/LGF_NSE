@@ -75,6 +75,7 @@ struct SimConfig
         pp.query("altchk_dir", altchk_dir);
         pp.query("chk_prefix", chk_prefix);
 
+        // PENDING: Log file backend working
         pp.query("write_log", write_log);
         pp.query("log_int", log_int);
         pp.query("log_dir", log_dir);

@@ -26,14 +26,28 @@ void extendedMain()
     // creating input/output object 
     IOManager io(cfg);
 
+    // creating timestepping variables beforehand
+    amrex::Real time;
+    int step = 0;
+    amrex::Real dt;
+
     // creating domain data objects
     amrex::IntVect dom_lo_iv(AMREX_D_DECL(0, 0, 0));
     amrex::IntVect dom_hi_iv(AMREX_D_DECL(cfg.n_cell-1, cfg.n_cell-1, cfg.n_cell-1));
     amrex::Box domain(dom_lo_iv, dom_hi_iv);
 
-    amrex::BoxArray ba(domain);
-    ba.maxSize(cfg.max_grid_size);
-
+    amrex::BoxArray ba;
+    // boxarray taken from ChkPoints if needed
+    if (cfg.start_from_chk)
+    {
+        io.initializeBAFromChk(step, time, ba);
+    }
+    else
+    {
+        ba.define(domain);
+        ba.maxSize(cfg.max_grid_size);
+    }
+    
     amrex::DistributionMapping dm(ba);
 
     amrex::RealBox real_box(cfg.dom_lo, cfg.dom_hi);
@@ -45,28 +59,36 @@ void extendedMain()
     // create solver object
     ProjectionWorkspace workspace(geom, ba, dm, cfg.n_comp, cfg.n_ghost);
 
-    initializeFlowField(state_n);
-
+    if (cfg.start_from_chk)
+    {
+        io.initializeFlowFieldFromChk(state_n);
+    }
+    else 
+    {
+        // starting from initial conditions
+        initializeFlowField(state_n);
+        time = cfg.t_start;
+        step = 0;
+    }
+    
     state_n.setBoundary(geom);
     
-    // performing time stepping
-    amrex::Real dt;
-    amrex::Real time = cfg.t_start;
-    int step = 0;
-
     // plotting initial conditions
-    if (cfg.write_plot)
+    if (cfg.write_plot && step == 0)
     {
         BL_PROFILE("<IO> Initial Plot()");
-        io.writeMyPlotFile(step, time, state_n, ba, dm, geom, cfg.n_cell, cfg.plot_prefix);
+        io.writeMyPlotFile(step, time, state_n, ba, dm, geom);
 
     }
 
+    // switch for main and alt chk files
+    bool writeMainChk = true;
+
+    // timestepping logic begins
     while(time < cfg.t_stop && step < cfg.max_steps)
     {
         auto step_start_time = amrex::second();
         
-        //dt = 0.0001;
         dt = workspace.computeDt(state_n, cfg.cfl, cfg.Re);
         
         // advance time using RK for time, KEP Morinishi for space and LGF for
@@ -81,10 +103,19 @@ void extendedMain()
         if (step % cfg.plot_int == 0 && cfg.write_plot)
         {
             BL_PROFILE("<IO> Interval Plot()");
-            io.writeMyPlotFile(step, time, state_n, ba, dm, geom, cfg.n_cell, cfg.plot_prefix);
+            io.writeMyPlotFile(step, time, state_n, ba, dm, geom);
         }
 
-        // track duration of simulation
+        // write checkpoints in specified intervals, write fallback 'alt' checkpoints
+        // 5 steps after specified interval
+        if ((step % cfg.chk_int == 0 || (step - 5) % cfg.chk_int == 0) && cfg.write_chk)
+        {
+            BL_PROFILE("<IO> Interval Checkpoint()");
+            io.writeMyChkFile(writeMainChk, step, time, state_n);
+            writeMainChk = !writeMainChk;
+        }
+
+        // track duration of timestep
         auto step_stop_time = amrex::second();
         auto step_duration = step_stop_time - step_start_time;
 

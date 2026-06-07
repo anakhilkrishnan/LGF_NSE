@@ -90,7 +90,7 @@ void extendedMain()
     }
 
     // logging initial kinetic energy data
-    if (!cfg.start_from_chk)
+    if (!cfg.start_from_chk && cfg.write_kedata)
     {
         // initialize kinetic_energy.dat
         io.initializeWriteKEData(step, time, workspace);
@@ -107,8 +107,11 @@ void extendedMain()
         dt = workspace.computeDt(state_n, cfg.cfl, cfg.Re);
 
         // perform KEP check and write data
-        workspace.compareKE(state_n);
-        io.writeKEData(step, time, workspace);
+        if (step % cfg.kedata_int == 0 && cfg.write_kedata)
+        {
+            workspace.compareKE(state_n);
+            io.writeKEData(step, time, workspace);
+        }
 
         // advance time using RK for time, KEP Morinishi for space and LGF for
         // pressure poisson

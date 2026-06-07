@@ -12,9 +12,17 @@ ProjectionWorkspace::ProjectionWorkspace(const amrex::Geometry& geom_in, const a
         rhs_vel[idim].define(ba_face, dm, n_comp, n_ghost);
         rhs_vel_corr[idim].define(ba_face, dm, n_comp, n_ghost);
 
+        rhs_kecomp[idim].define(ba_face, dm, n_comp, n_ghost);
+
         // initialize velocities upon creation
         rhs_vel[idim].setVal(0.0);
         rhs_vel_corr[idim].setVal(0.0);
+
+        rhs_kecomp[idim].setVal(0.0);
+
+        // initialize global ke component storage variables
+        global_kecomp[idim] = 0.0;
+        global_kecomp_dir[idim] = 0.0;
     }
 
     // initialize corr_pres upon creation
@@ -22,6 +30,8 @@ ProjectionWorkspace::ProjectionWorkspace(const amrex::Geometry& geom_in, const a
     corr_pres.setVal(0.0);
 
     divU_max_norm = 0.0;
+    global_ke = 0.0;
+    global_ke_dir = 0.0;
 }
 
 amrex::Real ProjectionWorkspace::computeDt(const FlowField& state, amrex::Real cfl, amrex::Real Re)
@@ -64,13 +74,60 @@ amrex::Real ProjectionWorkspace::computeDt(const FlowField& state, amrex::Real c
     return amrex::min(dt_adv, dt_diff);
 }
 
-void ProjectionWorkspace::computeConvectiveFluxes(const FlowField& stage, amrex::Real Re)
+void ProjectionWorkspace::computeKEFluxes(const FlowField& stage, amrex::Real Re)
 {
-    BL_PROFILE("<Compute> advanceTimeStep(): computeConvectiveFluxes()");
+    BL_PROFILE("<Compute> advanceTimeStep(): computeKEFluxes()");
+    // compute the right hand side of the KE evolution equations along x,y,z
+    // at the given stage discretized using a second order finite difference
+    // KEP scheme as outlined in Morinish et. al.
+}
+
+void ProjectionWorkspace::evolveKE(const FlowField& state_n, FlowField& stage, amrex::Real dt, amrex::Real alpha, amrex::Real beta, amrex::Real gamma)
+{
+    BL_PROFILE("<Compute> advanceTimeStep(): evolveKE()");
+    // use the right hand side to compute the next stage kinetic energy
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        // using amrex's linalg functions for this step; not updating any ghost
+        // cell data here, those are updated by BCs
+        amrex::MultiFab::LinComb(stage.getKEComp(idim), alpha, state_n.getKEComp(idim), 0, beta, stage.getKEComp(idim), 0, 0, stage.getKEComp(idim).nComp(), 0);
+        amrex::Real dt_by_gam = dt / gamma;
+        amrex::MultiFab::Saxpy(stage.getKEComp(idim), dt_by_gam, rhs_kecomp[idim], 0, 0, stage.getKEComp(idim).nComp(), 0);
+    }
+}
+
+void ProjectionWorkspace::compareKE(const FlowField& state_n)
+{
+    BL_PROFILE("<Compute> advanceTimeStep(): compareKE()");
+    // compute KE components directly from velocity fields; global reduce both
+    // KE and KEdir into component-wise sums and compare/writeout/print
+
+    global_ke = 0.0;
+    global_ke_dir = 0.0;
+
+    auto kecomp_dir = computeKEFromState(state_n);
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        // summing up across all MPI ranks
+        global_kecomp[idim] = state_n.getKEComp(idim).sum(0, false);
+        global_kecomp_dir[idim] = kecomp_dir[idim].sum(0, false);
+
+        // summing into global kinetic energy
+        global_ke += global_kecomp[idim];
+        global_ke_dir += global_kecomp_dir[idim];
+
+    }
+}
+
+void ProjectionWorkspace::computeMomentumFluxes(const FlowField& stage, amrex::Real Re)
+{
+    BL_PROFILE("<Compute> advanceTimeStep(): computeMomentumFluxes()");
     // compute the right hand side which is of the form 1/Re(laplacian(u)) -
-    // grad(P) - u.divergence(u) all taken at the n^th timestep discretized
+    // grad(P) - u.divergence(u) all taken at the given stage discretized
     // using a second order finite difference KEP scheme as outlined in
-    // Morinishi et al.
+    // Morinishi et. al.
 
     // extracting physical dx for computations
     const amrex::Geometry& geom = stage.getGeom();
@@ -118,8 +175,9 @@ void ProjectionWorkspace::computeConvectiveFluxes(const FlowField& stage, amrex:
 void ProjectionWorkspace::predictVelocity(const FlowField& state_n, FlowField& stage, amrex::Real dt, amrex::Real alpha, amrex::Real beta, amrex::Real gamma)
 {
     BL_PROFILE("<Compute> advanceTimeStep(): predictVelocity");
-    // use the right hand side to predict velocity at the next time step, before
+    // use the right hand side to predict velocity at the next stage, before
     // enforcing divergence free condition
+
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         // using amrex's linalg functions for this step not updating any ghost
@@ -128,6 +186,9 @@ void ProjectionWorkspace::predictVelocity(const FlowField& state_n, FlowField& s
         amrex::Real dt_by_gam = dt / gamma;
         amrex::MultiFab::Saxpy(stage.getVel(idim), dt_by_gam, rhs_vel[idim], 0, 0, stage.getVel(idim).nComp(), 0);
     }
+
+    // update ghost cells and physical BCs
+    stage.setBoundary();
 }
 
 void ProjectionWorkspace::computePressure(FlowField& stage, amrex::Real source_tag_thresh, amrex::Vector<int>& box_tag_arr)
@@ -226,6 +287,9 @@ void ProjectionWorkspace::correctVelocityandPressure(FlowField& stage, amrex::Re
     amrex::Real gam_by_dt = gamma/dt;
     amrex::MultiFab::Saxpy(stage.getPres(), gam_by_dt, corr_pres, 0, 0, stage.getPres().nComp(), stage.getPres().nGrow());
 
+    // fill ghost cells and physical BCs
+    stage.setBoundary();
+
     // additional checker for divergence at end of step extracting physical dx
     // for computations
     const amrex::Geometry& geom = stage.getGeom();
@@ -256,6 +320,7 @@ void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, am
     // appropriate coefficients alpha, beta, gamma
 
     BL_PROFILE("<Compute> advanceTimeStep()");
+
     FlowField stage = state_n;
     amrex::Vector<RKCoeffs> coeffs = getRKCoeffs(rk_order);
     amrex::Vector<int> tag_region;
@@ -267,13 +332,19 @@ void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, am
         amrex::Real beta = coeffs[k].bet;
         amrex::Real gamma = coeffs[k].gam;
 
+        // performing KE evolution routine
+        // compute and store KE fluxes in workspace
+        computeKEFluxes(stage, Re);
+
+        // evolve KE and store back in stage
+        evolveKE(state_n, stage, dt, alpha, beta, gamma);
+
         // compute and store fluxes in workspace
-        computeConvectiveFluxes(stage, Re);
+        computeMomentumFluxes(stage, Re);
 
         // compute predicted velocity without divergence free condition store
         // predicted velocity within stage
         predictVelocity(state_n, stage, dt, alpha, beta, gamma);
-        stage.setBoundary(geom);
 
         // find divergence of predicted velocity, store in workspace use custom
         // LGF solver to find pressure correction delta update pressure stored
@@ -286,10 +357,10 @@ void ProjectionWorkspace::advanceTimeStep(FlowField& state_n, amrex::Real dt, am
 
         // correct stage using correction from workspace
         correctVelocityandPressure(stage, gamma, dt);
-        stage.setBoundary(geom);
+        
     }
 
-    // export divergence at the end of each time step for confidence
+    // export tagged cells at the end of each time step
     for (MFIter mfi(stage.getTagRegion()); mfi.isValid(); ++mfi) 
     {
         if (tag_region[mfi.LocalIndex()] == 1) 
@@ -372,4 +443,40 @@ amrex::MultiFab computeCellCenteredVorticity(const FlowField& state)
     }
 
     return vort;
+}
+
+amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> computeKEFromState(const FlowField& state)
+{
+
+    BL_PROFILE("computeKEFromState()");
+    // compute face-centered component-wise KE from velocity field in state
+
+    // computing kecomp_dir one component at a time
+    amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> ke;
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        // capture the idim'th velocity component
+        const amrex::MultiFab& vel_comp = state.getVel(idim);
+
+        // define the KE component using the velocity's exact staggering and layout
+        ke[idim].define(vel_comp.boxArray(), vel_comp.DistributionMap(), vel_comp.nComp(), vel_comp.nGrow());
+
+        // initializing to zero to clear garbage values out
+        ke[idim].setVal(0.0);
+
+        for (amrex::MFIter mfi(ke[idim], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const amrex::Box& bx = mfi.tilebox();
+
+            auto const& ke_arr = ke[idim].array(mfi);
+            auto const& vel_arr = vel_comp.const_array(mfi);
+
+            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                ke_arr(i,j,k) = 0.5 * (vel_arr(i,j,k) * vel_arr(i,j,k));
+            });
+        }
+    }
+
+    return ke;
 }

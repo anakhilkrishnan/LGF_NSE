@@ -14,6 +14,7 @@ class FlowField
 {
     private:
         amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> vel;
+        amrex::Array<amrex::MultiFab, AMREX_SPACEDIM> kecomp;
         amrex::MultiFab pres;
         amrex::MultiFab divU;
         amrex::MultiFab divU_at_end;
@@ -28,6 +29,8 @@ class FlowField
         // retrieves corresponding dimension's velocity
         amrex::MultiFab& getVel(int idim);
         const amrex::MultiFab& getVel(int idim) const;
+        amrex::MultiFab& getKEComp(int idim);
+        const amrex::MultiFab& getKEComp(int idim) const;
         amrex::MultiFab& getPres();
         const amrex::MultiFab& getPres() const;
         amrex::MultiFab& getTagRegion();
@@ -38,7 +41,7 @@ class FlowField
         const amrex::MultiFab& getDivUAtEnd() const;
         const amrex::Geometry& getGeom() const;
 
-        void setBoundary(const amrex::Geometry& geom);
+        void setBoundary();
 };
 
 #endif

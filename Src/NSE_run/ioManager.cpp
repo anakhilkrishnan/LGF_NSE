@@ -180,3 +180,43 @@ void IOManager::writeMyPlotFile(int step, amrex::Real time, const FlowField& sta
     WriteSingleLevelPlotfile(plotfile_name, plotFab, varnames, geom, time, step);
     amrex::Print() << "Plotfile written to: " << plotfile_name << "\n";
 }
+
+void IOManager::writeKEData(int step, amrex::Real time, const ProjectionWorkspace& workspace)
+{   
+    std::string write_dir = cfg.plot_dir + cfg.kedata_prefix;
+
+    // positive error is more than what kinetic energy evolution equation predicts
+    amrex::Real global_ke_err = workspace.global_ke_dir - workspace.global_ke ;
+
+    amrex::PrintToFile(write_dir, std::ios_base::app).SetPrecision(17)
+                        << step << "\t" << time << "\t" << workspace.global_ke_dir <<
+                        "\t" << workspace.global_ke << "\t" << global_ke_err;
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        amrex::PrintToFile(write_dir, std::ios_base::app).SetPrecision(17)
+                        << "\t" << workspace.global_kecomp_dir[idim] 
+                        << "\t" << workspace.global_kecomp[idim];
+    }
+
+    amrex::PrintToFile(write_dir, std::ios_base::app) << "\n";
+
+
+}
+
+void IOManager::initializeWriteKEData(int step, amrex::Real time, const ProjectionWorkspace& workspace)
+{
+    std::string write_dir = cfg.plot_dir + cfg.kedata_prefix;
+
+    // overwrite
+    amrex::PrintToFile(write_dir, std::ios_base::out) << "Step\tTime\ttotalKE_direct\ttotalKE_evolved\ttotalKE_err";
+    
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+    {
+        amrex::PrintToFile(write_dir, std::ios_base::app)
+                        << "\ttotalKE_dir_comp" << idim
+                        << "\ttotalKE_evol_comp" << idim;
+    }
+
+    amrex::PrintToFile(write_dir, std::ios_base::app) << "\n";
+}

@@ -20,6 +20,6 @@
 using namespace amrex;
 
 void extendedMain();
-void initializeFlowField(FlowField& init_state);
+void initializeVelField(FlowField& init_state);
 
 #endif

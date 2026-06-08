@@ -185,21 +185,18 @@ void IOManager::writeKEData(int step, amrex::Real time, const ProjectionWorkspac
 {   
     std::string write_dir = cfg.plot_dir + cfg.kedata_prefix;
 
-    // positive error is more than what kinetic energy evolution equation predicts
-    amrex::Real global_ke_err = workspace.global_ke_dir - workspace.global_ke ;
-
     if (amrex::ParallelDescriptor::IOProcessor())
     {
         std::ofstream ofs(write_dir, std::ios::out | std::ios::app);
         ofs.precision(17);
  
-        ofs << step << "\t" << time << "\t" << workspace.global_ke_dir
-            << "\t" << workspace.global_ke << "\t" << global_ke_err;
+        ofs << step << "\t" << time;
  
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
         {
             ofs << "\t" << workspace.global_kecomp_dir[idim]
-                << "\t" << workspace.global_kecomp[idim];
+                << "\t" << workspace.global_kecomp[idim]
+                << "\t" << workspace.global_kecomp_err[idim];
         }
  
         ofs << "\n";
@@ -219,12 +216,13 @@ void IOManager::initializeWriteKEData(int step, amrex::Real time, const Projecti
  
         std::ofstream ofs(write_dir, std::ios::out | std::ios::trunc);
  
-        ofs << "Step\tTime\ttotalKE_direct\ttotalKE_evolved\ttotalKE_err";
+        ofs << "Step\tTime";
  
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
         {
             ofs << "\ttotalKE_dir_comp" << idim
-                << "\ttotalKE_evol_comp" << idim;
+                << "\ttotalKE_evol_comp" << idim
+                << "\ttotalKE_err_comp" << idim;
         }
  
         ofs << "\n";

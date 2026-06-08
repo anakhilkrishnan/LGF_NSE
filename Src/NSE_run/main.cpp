@@ -66,7 +66,11 @@ void extendedMain()
     else 
     {
         // starting from initial conditions
-        initializeFlowField(state_n);
+        initializeVelField(state_n);
+
+        // populating pressure based on divergence of Navier-Stokes at initial conditions
+        workspace.initializePresField(state_n, cfg.Re, cfg.source_tag_thresh);
+
         time = cfg.t_start;
         step = 0;
     }

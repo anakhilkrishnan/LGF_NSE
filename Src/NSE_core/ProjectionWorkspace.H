@@ -38,14 +38,14 @@ class ProjectionWorkspace
         amrex::Real divU_max_norm;
         amrex::Array<amrex::Real, AMREX_SPACEDIM> global_kecomp;
         amrex::Array<amrex::Real, AMREX_SPACEDIM> global_kecomp_dir;
-        amrex::Real global_ke;
-        amrex::Real global_ke_dir;
+        amrex::Array<amrex::Real, AMREX_SPACEDIM> global_kecomp_err;
 
         ProjectionWorkspace(const amrex::Geometry& geom_in, const amrex::BoxArray& ba_in, const amrex::DistributionMapping& dm_in, const int n_comp, const int n_ghost);
 
         amrex::Real computeDt(const FlowField& state, amrex::Real cfl, amrex::Real Re);
+        void initializePresField(FlowField& init_state, amrex::Real Re, amrex::Real source_tag_thresh);
 
-        void computeKEFluxes(const FlowField& stage, amrex::Real Re);
+        void computeKECompFluxes(const FlowField& stage, amrex::Real Re);
         void evolveKE(const FlowField& state_n, FlowField& stage, amrex::Real dt, amrex::Real alpha, amrex::Real beta, amrex::Real gamma);
         void compareKE(const FlowField& state_n);
 

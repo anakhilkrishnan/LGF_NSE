@@ -2,10 +2,10 @@
 
 using namespace amrex;
 
-void initializeFlowField(FlowField& init_state)
+void initializeVelField(FlowField& init_state)
 {
     // profiling block for Tiny Profiling
-    BL_PROFILE("<Setup> initializeFlowField()");
+    BL_PROFILE("<Setup> initializeVelField()");
 
     // extracting data from FlowField object
     const amrex::Geometry& geom = init_state.getGeom();

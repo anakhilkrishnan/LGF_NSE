@@ -71,15 +71,15 @@ void extendedMain()
         // populating pressure based on divergence of Navier-Stokes at initial conditions
         workspace.initializePresField(state_n, cfg.Re, cfg.source_tag_thresh);
 
+        // populating KE comp arrays
+        auto init_kecomp_dir = computeKEFromState(state_n);
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
+        {
+            amrex::MultiFab::Copy(state_n.getKEComp(idim), init_kecomp_dir[idim], 0, 0, state_n.getKEComp(idim).nComp(), 0);
+        }
+
         time = cfg.t_start;
         step = 0;
-    }
-    
-    // populating KE arrays in state_n
-    auto init_kecomp_dir = computeKEFromState(state_n);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-    {
-        amrex::MultiFab::Copy(state_n.getKEComp(idim), init_kecomp_dir[idim], 0, 0, state_n.getKEComp(idim).nComp(), 0);
     }
     
     // fill ghost cells and apply physical BCs

@@ -36,3 +36,11 @@ add_custom_command(TARGET nserun POST_BUILD
     "${CMAKE_SOURCE_DIR}/Exec/NSE_test/debug.sh"
     COMMENT "Syncing jobscript to Exec/NSE_test..."
 )
+
+# Update the case description file
+add_custom_command(TARGET nserun POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/description.txt"
+    "${CMAKE_SOURCE_DIR}/Exec/NSE_test/description.txt"
+    COMMENT "Syncing case description to Exec/NSE_test..."
+)

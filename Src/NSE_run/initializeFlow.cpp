@@ -4,25 +4,17 @@ using namespace amrex;
 
 void initializeVelField(FlowField& init_state)
 {
-    // profiling block for Tiny Profiling
-    BL_PROFILE("<Setup> initializeVelField()");
+    BL_PROFILE("<Setup> initializeFlowField()");
 
-    // extracting data from FlowField object
     const amrex::Geometry& geom = init_state.getGeom();
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> prob_lo = geom.ProbLoArray();
 
-    // extracting physical dx, physical domain lo for computing x,y,z
-    GpuArray<amrex::Real, AMREX_SPACEDIM> dx = geom.CellSizeArray();
-    GpuArray<amrex::Real, AMREX_SPACEDIM> prob_lo = geom.ProbLoArray();
-
-    // data extracted from "isotropic finite volume discretizations - RK Shukla, P Giri"
     amrex::Real r0 = 0.05;
     amrex::Real omega_0 = 2.0 * std::sqrt(2.0 * exp(1.0)) / r0;
-
-    // defining the vortex centers
     amrex::Real dTheta = M_PI / 32.0;
     amrex::Vector<amrex::Real> thetas = {0.0, 2.0*M_PI/3.0, 4.0*M_PI/3.0};
 
-    // defining GPU arrays for centers to be used inside ParallelFor's
     amrex::GpuArray<amrex::Real, 6> cx;
     amrex::GpuArray<amrex::Real, 6> cy;
     
@@ -37,7 +29,18 @@ void initializeVelField(FlowField& init_state)
         idx++;
     }
 
-    // initializing x-velocity
+    // GPU-safe lambda to compute the streamfunction at any (x,y) node
+    auto get_psi = [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) -> amrex::Real {
+        amrex::Real psi_val = 0.0;
+        for (int v = 0; v < 6; ++v) {
+            amrex::Real r2 = (x - cx[v])*(x - cx[v]) + (y - cy[v])*(y - cy[v]);
+            // The exact integral of the continuous velocity equations
+            psi_val += 0.25 * omega_0 * r0 * r0 * std::exp(-r2 / (r0 * r0));
+        }
+        return psi_val;
+    };
+
+    // Initialize x-velocity (u) on the x-faces
     for (amrex::MFIter mfi(init_state.getVel(0), amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.tilebox();
@@ -45,26 +48,17 @@ void initializeVelField(FlowField& init_state)
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
         {
-            // x-face 'i' is exactly on the edge, 'j' is cell-centered
-            amrex::Real x = prob_lo[0] + i * dx[0]; 
-            amrex::Real y = prob_lo[1] + (j + 0.5) * dx[1]; 
+            // For the x-face at (i, j+0.5), evaluate psi at the North and South nodes
+            amrex::Real x   = prob_lo[0] + i * dx[0]; 
+            amrex::Real y_N = prob_lo[1] + (j + 1) * dx[1]; 
+            amrex::Real y_S = prob_lo[1] + j * dx[1]; 
 
-            amrex::Real u_val = 0.0;
-            
-            // linear combination of all 6 vortices
-            for (int v = 0; v < 6; ++v) 
-            {
-                amrex::Real xc = cx[v];
-                amrex::Real yc = cy[v];
-                amrex::Real r2 = (x - xc)*(x - xc) + (y - yc)*(y - yc);
-                
-                u_val += (-0.5 * omega_0) * (y - yc) * std::exp(-r2 / (r0 * r0));
-            }
-            u_arr(i,j,k) = u_val;
+            // u = d(psi)/dy
+            u_arr(i,j,k) = (get_psi(x, y_N) - get_psi(x, y_S)) / dx[1];
         });
     }
 
-    // initializing y-velocity
+    // Initialize y-velocity (v) on the y-faces
     for (amrex::MFIter mfi(init_state.getVel(1), amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.tilebox();
@@ -72,22 +66,13 @@ void initializeVelField(FlowField& init_state)
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
         {
-            // y-face 'i' is cell-centered, 'j' is exactly on the edge
-            amrex::Real x = prob_lo[0] + (i + 0.5) * dx[0]; 
-            amrex::Real y = prob_lo[1] + j * dx[1]; 
+            // For the y-face at (i+0.5, j), evaluate psi at the East and West nodes
+            amrex::Real x_E = prob_lo[0] + (i + 1) * dx[0]; 
+            amrex::Real x_W = prob_lo[0] + i * dx[0]; 
+            amrex::Real y   = prob_lo[1] + j * dx[1]; 
 
-            amrex::Real v_val = 0.0;
-            
-            for (int v = 0; v < 6; ++v) 
-            {
-                amrex::Real xc = cx[v];
-                amrex::Real yc = cy[v];
-                amrex::Real r2 = (x - xc)*(x - xc) + (y - yc)*(y - yc);
-                
-                v_val += (0.5 * omega_0) * (x - xc) * std::exp(-r2 / (r0 * r0));
-            }
-            v_arr(i,j,k) = v_val;
+            // v = -d(psi)/dx
+            v_arr(i,j,k) = -(get_psi(x_E, y) - get_psi(x_W, y)) / dx[0];
         });
     }
-
 }

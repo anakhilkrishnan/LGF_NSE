@@ -5,6 +5,8 @@ IOManager::IOManager(const SimConfig& config) : cfg(config)
     better_dir = "";
 }
 
+// PENDING: Write Chk and Plt data for KE as well!!
+
 void IOManager::writeMyChkFile(bool writeMainChk, int step, amrex::Real time, const FlowField& state)
 {
     // PENDING: Modify to write checkpoints for AMR data

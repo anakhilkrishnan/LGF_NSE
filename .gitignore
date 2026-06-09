@@ -17,11 +17,3 @@ out/
 # Ignore complete Exec directory, have it local for each machine
 /Exec/*
 
-# Executable Binaries
-# Ignore the compiled solver binaries inside the Exec subfolders
-# Build artifacts and binaries
-nserun
-*.o
-*.ex
-plt*
-post*

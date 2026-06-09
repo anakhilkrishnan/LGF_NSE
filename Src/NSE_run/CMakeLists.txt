@@ -26,7 +26,7 @@ add_custom_command(TARGET nserun POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/inputs"
     "${CMAKE_SOURCE_DIR}/Exec/NSE_test/inputs"
-    COMMENT "Syncing inputs to Exec/NSE_test..."
+    COMMENT "Syncing inputs file to Exec/NSE_test..."
 )
 
 # Update the jobscript file
@@ -37,10 +37,18 @@ add_custom_command(TARGET nserun POST_BUILD
     COMMENT "Syncing jobscript to Exec/NSE_test..."
 )
 
+# Update the KE postprocessing file
+add_custom_command(TARGET nserun POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/postProcessKE.py"
+    "${CMAKE_SOURCE_DIR}/Exec/NSE_test/postProcessKE.py"
+    COMMENT "Syncing KE postprocessing file to Exec/NSE_test..."
+)
+
 # Update the case description file
 add_custom_command(TARGET nserun POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/description.txt"
     "${CMAKE_SOURCE_DIR}/Exec/NSE_test/description.txt"
-    COMMENT "Syncing case description to Exec/NSE_test..."
+    COMMENT "Syncing case description file to Exec/NSE_test..."
 )

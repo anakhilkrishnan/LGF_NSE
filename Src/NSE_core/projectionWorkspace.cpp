@@ -163,48 +163,48 @@ void ProjectionWorkspace::computeKECompFluxes(const FlowField& stage, amrex::Rea
             const amrex::Box& bx = mfi.tilebox();
 
             // .........................KEFlux directly from MomentumFlux....................................
-            auto const& rhs_ke_arr  = rhs_kecomp[idim].array(mfi);
-            auto const& rhs_vel_arr = rhs_vel[idim].const_array(mfi);
-            auto const& vel_arr     = stage.getVel(idim).const_array(mfi);
-
-            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                // directly compute the kinetic energy fluxes from the momentum equation 
-                rhs_ke_arr(i,j,k) = vel_arr(i,j,k) * rhs_vel_arr(i,j,k);
-            });
-            // .....................................END.......................................................
-            // .........................Separate KEFlux Kernel Compute .......................................
-            // amrex::GpuArray<amrex::Array4<amrex::Real const>, AMREX_SPACEDIM> vel_arr;
-            // amrex::GpuArray<amrex::Array4<amrex::Real const>, AMREX_SPACEDIM> kecomp_arr;
-            // for (int d = 0; d < AMREX_SPACEDIM; ++d) 
-            // {
-            //     vel_arr[d] = stage.getVel(d).const_array(mfi);
-            //     kecomp_arr[d] = stage.getKEComp(d).const_array(mfi);
-            // }
-            // auto const& pres_arr = stage.getPres().const_array(mfi);
             // auto const& rhs_ke_arr  = rhs_kecomp[idim].array(mfi);
+            // auto const& rhs_vel_arr = rhs_vel[idim].const_array(mfi);
+            // auto const& vel_arr     = stage.getVel(idim).const_array(mfi);
 
             // amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             // {
-            //     // evaluating one at a time for template variable idim, because
-            //     // these happen at compile time
-            //     if (idim == 0) 
-            //     {
-            //         rhs_ke_arr(i,j,k) = morinishiKECompFlux<0>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
-            //     }
-            // #if AMREX_SPACEDIM >= 2
-            //     else if (idim == 1) 
-            //     {
-            //         rhs_ke_arr(i,j,k) = morinishiKECompFlux<1>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
-            //     }
-            // #endif
-            // #if AMREX_SPACEDIM == 3
-            //     else if (idim == 2) 
-            //     {
-            //         rhs_ke_arr(i,j,k) = morinishiKECompFlux<2>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
-            //     }
-            // #endif
+            //     // directly compute the kinetic energy fluxes from the momentum equation 
+            //     rhs_ke_arr(i,j,k) = vel_arr(i,j,k) * rhs_vel_arr(i,j,k);
             // });
+            // .....................................END.......................................................
+            // .........................Separate KEFlux Kernel Compute .......................................
+            amrex::GpuArray<amrex::Array4<amrex::Real const>, AMREX_SPACEDIM> vel_arr;
+            amrex::GpuArray<amrex::Array4<amrex::Real const>, AMREX_SPACEDIM> kecomp_arr;
+            for (int d = 0; d < AMREX_SPACEDIM; ++d) 
+            {
+                vel_arr[d] = stage.getVel(d).const_array(mfi);
+                kecomp_arr[d] = stage.getKEComp(d).const_array(mfi);
+            }
+            auto const& pres_arr = stage.getPres().const_array(mfi);
+            auto const& rhs_ke_arr  = rhs_kecomp[idim].array(mfi);
+
+            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                // evaluating one at a time for template variable idim, because
+                // these happen at compile time
+                if (idim == 0) 
+                {
+                    rhs_ke_arr(i,j,k) = morinishiKECompFlux<0>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
+                }
+            #if AMREX_SPACEDIM >= 2
+                else if (idim == 1) 
+                {
+                    rhs_ke_arr(i,j,k) = morinishiKECompFlux<1>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
+                }
+            #endif
+            #if AMREX_SPACEDIM == 3
+                else if (idim == 2) 
+                {
+                    rhs_ke_arr(i,j,k) = morinishiKECompFlux<2>(i, j, k, vel_arr, pres_arr, kecomp_arr, dx, Re);
+                }
+            #endif
+            });
             // ............................................END.................................................
         }
     }

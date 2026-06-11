@@ -41,7 +41,7 @@ add_custom_command(TARGET nserun POST_BUILD
 add_custom_command(TARGET nserun POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/postProcessKE.py"
-    "${CMAKE_SOURCE_DIR}/Exec/NSE_test/postProcessKE.py"
+    "${CMAKE_SOURCE_DIR}/Exec/NSE_test/Results/postProcessKE.py"
     COMMENT "Syncing KE postprocessing file to Exec/NSE_test..."
 )
 

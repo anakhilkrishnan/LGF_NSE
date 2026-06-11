@@ -329,8 +329,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real u_W = 0.5 * (u(i,j,k) + u(i-1,j,k));
 
         // evaluating KE
-        amrex::Real ke_u_E = 0.5 * (ke_u(i+1,j,k) + ke_u(i,j,k));
-        amrex::Real ke_u_W = 0.5 * (ke_u(i,j,k) + ke_u(i-1,j,k));
+        amrex::Real ke_u_E = 0.5 * (u(i+1,j,k) * u(i,j,k));
+        amrex::Real ke_u_W = 0.5 * (u(i,j,k) * u(i-1,j,k));
 
         amrex::Real conv_x = (u_E * ke_u_E - u_W * ke_u_W) * idx;
         convterm = conv_x;
@@ -340,8 +340,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real v_N = 0.5 * (v(i,j+1,k) + v(i-1,j+1,k));
         amrex::Real v_S = 0.5 * (v(i,j,k) + v(i-1,j,k));
 
-        amrex::Real ke_u_N = 0.5 * (ke_u(i,j+1,k) + ke_u(i,j,k));
-        amrex::Real ke_u_S = 0.5 * (ke_u(i,j,k) + ke_u(i,j-1,k));
+        amrex::Real ke_u_N = 0.5 * (u(i,j+1,k) * u(i,j,k));
+        amrex::Real ke_u_S = 0.5 * (u(i,j,k) * u(i,j-1,k));
 
         amrex::Real conv_y = (v_N * ke_u_N - v_S * ke_u_S) * idy;
         convterm += conv_y;
@@ -352,8 +352,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real w_F = 0.5 * (w(i,j,k+1) + w(i-1,j,k+1));
         amrex::Real w_B = 0.5 * (w(i,j,k) + w(i-1,j,k));
 
-        amrex::Real ke_u_F = 0.5 * (ke_u(i,j,k+1) + ke_u(i,j,k));
-        amrex::Real ke_u_B = 0.5 * (ke_u(i,j,k) + ke_u(i,j,k-1));
+        amrex::Real ke_u_F = 0.5 * (u(i,j,k+1) * u(i,j,k));
+        amrex::Real ke_u_B = 0.5 * (u(i,j,k) * u(i,j,k-1));
 
         amrex::Real conv_z = (w_F * ke_u_F - w_B * ke_u_B) * idz;
         convterm += conv_z;
@@ -388,8 +388,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real u_E = 0.5 * (u(i+1,j,k) + u(i+1,j-1,k));
         amrex::Real u_W = 0.5 * (u(i,j,k) + u(i,j-1,k));
         
-        amrex::Real ke_v_E = 0.5 * (ke_v(i+1,j,k) + ke_v(i,j,k));
-        amrex::Real ke_v_W = 0.5 * (ke_v(i,j,k) + ke_v(i-1,j,k));
+        amrex::Real ke_v_E = 0.5 * (v(i+1,j,k) * v(i,j,k));
+        amrex::Real ke_v_W = 0.5 * (v(i,j,k) * v(i-1,j,k));
 
         amrex::Real conv_x = (u_E * ke_v_E - u_W * ke_v_W) * idx;
         convterm = conv_x;
@@ -397,8 +397,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real v_N = 0.5 * (v(i,j+1,k) + v(i,j,k));
         amrex::Real v_S = 0.5 * (v(i,j,k) + v(i,j-1,k));
 
-        amrex::Real ke_v_N = 0.5 * (ke_v(i,j+1,k) + ke_v(i,j,k));
-        amrex::Real ke_v_S = 0.5 * (ke_v(i,j,k) + ke_v(i,j-1,k));
+        amrex::Real ke_v_N = 0.5 * (v(i,j+1,k) * v(i,j,k));
+        amrex::Real ke_v_S = 0.5 * (v(i,j,k) * v(i,j-1,k));
 
         amrex::Real conv_y = (v_N * ke_v_N - v_S * ke_v_S) * idy;
         convterm += conv_y;
@@ -407,8 +407,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real w_F = 0.5 * (w(i,j,k+1) + w(i,j-1,k+1));
         amrex::Real w_B = 0.5 * (w(i,j,k) + w(i,j-1,k));
 
-        amrex::Real ke_v_F = 0.5 * (ke_v(i,j,k+1) + ke_v(i,j,k));
-        amrex::Real ke_v_B = 0.5 * (ke_v(i,j,k) + ke_v(i,j,k-1));
+        amrex::Real ke_v_F = 0.5 * (v(i,j,k+1) * v(i,j,k));
+        amrex::Real ke_v_B = 0.5 * (v(i,j,k) * v(i,j,k-1));
 
         amrex::Real conv_z = (w_F * ke_v_F - w_B * ke_v_B) * idz;
         convterm += conv_z;
@@ -442,8 +442,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real u_E = 0.5 * (u(i+1,j,k) + u(i+1,j,k-1));
         amrex::Real u_W = 0.5 * (u(i,j,k) + u(i,j,k-1));
 
-        amrex::Real ke_w_E = 0.5 * (ke_w(i+1,j,k) + ke_w(i,j,k));
-        amrex::Real ke_w_W = 0.5 * (ke_w(i,j,k) + ke_w(i-1,j,k));
+        amrex::Real ke_w_E = 0.5 * (w(i+1,j,k) * w(i,j,k));
+        amrex::Real ke_w_W = 0.5 * (w(i,j,k) * w(i-1,j,k));
 
         amrex::Real conv_x = (u_E * ke_w_E - u_W * ke_w_W) * idx;
         convterm = conv_x;
@@ -451,8 +451,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real v_N = 0.5 * (v(i,j+1,k) + v(i,j+1,k-1));
         amrex::Real v_S = 0.5 * (v(i,j,k) + v(i,j,k-1));
 
-        amrex::Real ke_w_N = 0.5 * (ke_w(i,j+1,k) + ke_w(i,j,k));
-        amrex::Real ke_w_S = 0.5 * (ke_w(i,j,k) + ke_w(i,j-1,k));
+        amrex::Real ke_w_N = 0.5 * (w(i,j+1,k) * w(i,j,k));
+        amrex::Real ke_w_S = 0.5 * (w(i,j,k) * w(i,j-1,k));
 
         amrex::Real conv_y = (v_N * ke_w_N - v_S * ke_w_S) * idy;
         convterm += conv_y;
@@ -460,8 +460,8 @@ amrex::Real morinishiKECompFlux(int i, int j, int k,
         amrex::Real w_F = 0.5 * (w(i,j,k+1) + w(i,j,k));
         amrex::Real w_B = 0.5 * (w(i,j,k) + w(i,j,k-1));
 
-        amrex::Real ke_w_F = 0.5 * (ke_w(i,j,k+1) + ke_w(i,j,k));
-        amrex::Real ke_w_B = 0.5 * (ke_w(i,j,k) + ke_w(i,j,k-1));
+        amrex::Real ke_w_F = 0.5 * (w(i,j,k+1) * w(i,j,k));
+        amrex::Real ke_w_B = 0.5 * (w(i,j,k) * w(i,j,k-1));
 
         amrex::Real conv_z = (w_F * ke_w_F - w_B * ke_w_B) * idz;
         convterm += conv_z;
